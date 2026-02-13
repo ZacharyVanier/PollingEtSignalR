@@ -12,4 +12,3 @@ namespace labo.signalr.api.Models
 		public bool Completed { get; set; } = false;
 	}
 }
-
