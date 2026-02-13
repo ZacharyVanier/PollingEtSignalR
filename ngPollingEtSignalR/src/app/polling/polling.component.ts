@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { UselessTask } from '../models/UselessTask';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
@@ -24,11 +24,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
   templateUrl: './polling.component.html',
   styleUrls: ['./polling.component.css'],
 })
-export class PollingComponent implements OnInit {
-  apiUrl = 'https://localhost:7289/api/';
+export class PollingComponent implements OnInit, OnDestroy {
+  apiUrl = 'http://localhost:5042/api/';
   title = 'labo.signalr.ng';
   tasks: UselessTask[] = [];
   taskname: string = '';
+  private pollingInterval: any;
 
   constructor(private http: HttpClient) {}
 
@@ -36,18 +37,40 @@ export class PollingComponent implements OnInit {
     this.updateTasks();
   }
 
+  ngOnDestroy(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
+  }
+
   complete(id: number) {
-    // TODO On invoke la méthode pour compléter une tâche sur le serveur (Contrôleur d'API)
+    this.http.get(this.apiUrl + 'uselesstasks/complete/' + id).subscribe(() => {
+      this.getTasks();
+    });
   }
 
   addtask() {
-    // TODO On invoke la méthode pour ajouter une tâche sur le serveur (Contrôleur d'API)
+    this.http.post<UselessTask>(this.apiUrl + 'uselesstasks/add?taskText=' + this.taskname, {}).subscribe((task) => {
+      this.tasks.push(task);
+      this.taskname = '';
+    });
 
     console.log(this.tasks);
   }
 
+  getTasks() {
+    this.http.get<UselessTask[]>(this.apiUrl + 'uselesstasks/getall').subscribe((tasks) => {
+      this.tasks = tasks;
+    });
+  }
+
   async updateTasks() {
-    // TODO: Faire une première implémentation simple avec un appel au serveur pour obtenir la liste des tâches
-    // TODO: UNE FOIS QUE VOUS AVEZ TESTER AVEC DEUX CLIENTS: Utiliser le polling pour mettre la liste de tasks à jour chaque seconde
+    // Appel initial
+    this.getTasks();
+
+    // Polling: mise à jour chaque seconde
+    this.pollingInterval = setInterval(() => {
+      this.getTasks();
+    }, 1000);
   }
 }
